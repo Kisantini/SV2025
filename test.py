@@ -6,7 +6,7 @@ st.set_page_config(
     page_title="Visualization"
 )
 
-st.header("Genetic Algorithm", divider="gray")
+st.header("Student Mental Health Year 1", divider="gray")
 
 
 # --- Assuming 'mental_health_df' is already loaded and available in your Streamlit app ---
