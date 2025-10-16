@@ -5,7 +5,7 @@ import pandas as pd
 # Assuming 'mental_health_df' is loaded elsewhere in your Streamlit app.
 # For demonstration, let's create a placeholder DataFrame.
 # In a real application, you would replace this with your actual data loading.
-data = {'Choose your gender': ['Female', 'Male', 'Female', 'Male', 'Non-binary', 'Male', 'Female', 'Male']}
+data = {'Choose your gender': ['Female', 'Male', 'Female', 'Male','Female', 'Male']}
 mental_health_df = pd.DataFrame(data)
 
 # --- Code Conversion Starts Here ---
