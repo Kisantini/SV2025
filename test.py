@@ -43,3 +43,27 @@ st.plotly_chart(fig, use_container_width=True)
 # You can also display the raw data used for the chart
 st.write("### Gender Counts")
 st.dataframe(gender_counts)
+
+st.header("1. Condition Prevalence by Gender")
+
+gender_prevalence = data.groupby('Gender')[['Depression', 'Anxiety', 'PanicAttack']].sum().reset_index()
+gender_prevalence_melted = gender_prevalence.melt(
+id_vars='Gender', var_name='Condition', value_name='Count'
+    )
+
+fig = px.bar(
+    gender_prevalence_melted,
+    x='Condition',
+    y='Count',
+    color='Gender',
+    barmode='group',
+    title='Self-Reported Cases by Gender',
+    template='plotly_white',
+    color_discrete_map={'Female': '#F67280', 'Male': '#3F78C0'}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("""
+    **Interpretation:**
+    This bar chart illustrates a clear disparity in reported mental health issues between genders. Female students report a substantially higher absolute number of cases across all three conditions (Depression, Anxiety, and Panic Attack). While this may be influenced by enrollment numbers, the gap is significant enough to suggest female students face disproportionate mental distress or are more likely to report it. University support services should consider gender-sensitive outreach and resources to address this pattern effectively.
+    """)
