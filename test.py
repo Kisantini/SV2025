@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+import plotly.express as px
 
 # --- Configuration and Data Loading ---
 
@@ -8,7 +8,7 @@ import altair as alt
 URL = "https://raw.githubusercontent.com/Kisantini/SV2025/refs/heads/main/student_mental_health_data.csv"
 
 st.set_page_config(
-    page_title="Student Mental Health Analysis",
+    page_title="Interactive Student Mental Health Analysis",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -20,9 +20,10 @@ def load_and_clean_data(data_url):
     try:
         df = pd.read_csv(data_url)
 
-        # 1. Rename columns for simplicity and consistency based on inspection
+        # 1. Rename columns for simplicity and consistency
         df.rename(columns={
             'Choose your gender': 'Gender',
+            'What is your course?': 'Course',
             'Your current year of Study': 'Year',
             'What is your CGPA?': 'CGPA',
             'Marital status': 'Marital_Status',
@@ -32,24 +33,25 @@ def load_and_clean_data(data_url):
             'Did you seek any specialist for a treatment?': 'Treatment_Sought'
         }, inplace=True)
 
-        # 2. Clean 'Gender' column (convert to title case for consistency)
+        # 2. Clean and standardize categorical columns
         df['Gender'] = df['Gender'].str.title()
-
-        # 3. Clean 'Year' column (standardize capitalization, e.g., 'Year 1' to 'year 1')
-        df['Year'] = df['Year'].str.lower().str.replace('year ', 'Year ')
-        
-        # 4. Clean 'CGPA' column (strip whitespace)
+        df['Year'] = df['Year'].str.lower().str.replace('year ', 'Year ').replace({'Year 1': 'Year 1', 'Year 2': 'Year 2', 'Year 3': 'Year 3', 'year 4': 'Year 4'})
         df['CGPA'] = df['CGPA'].str.strip()
+        
+        # 3. Create a combined mental health issue count (0 to 3)
+        issue_map = {'Yes': 1, 'No': 0}
+        df['Depression_Score'] = df['Depression'].map(issue_map)
+        df['Anxiety_Score'] = df['Anxiety'].map(issue_map)
+        df['Panic_Attack_Score'] = df['Panic_Attack'].map(issue_map)
+        
+        df['Issue_Count'] = df['Depression_Score'] + df['Anxiety_Score'] + df['Panic_Attack_Score']
 
-        # 5. Create a combined mental health issue column
-        mental_health_cols = ['Depression', 'Anxiety', 'Panic_Attack']
-        df['Any_Mental_Health_Issue'] = df[mental_health_cols].apply(
-            lambda row: 'Yes' if (row == 'Yes').any() else 'No', axis=1
-        )
+        # 4. Create binary flag for "Any Issue"
+        df['Any_Issue'] = df['Issue_Count'].apply(lambda x: 'Yes' if x > 0 else 'No')
         
-        # Drop the row with NaN Age (only one in this dataset)
+        # 5. Drop the row with NaN Age
         df.dropna(subset=['Age'], inplace=True)
-        
+
         return df
 
     except Exception as e:
@@ -60,160 +62,154 @@ github_df = load_and_clean_data(URL)
 
 # --- Streamlit Dashboard Layout ---
 
-st.title("Student Mental Health Dashboard 📊")
-st.markdown("Exploring the relationship between student demographics, academic status, and reported mental health issues (Depression, Anxiety, Panic Attacks).")
+st.title("Interactive Student Mental Health Analysis 🧠")
+st.markdown("This dashboard uses **Plotly** for dynamic and engaging visualizations of student mental health survey data.")
 
 if github_df.empty:
     st.stop()
-
-st.sidebar.header("Dashboard Controls")
-show_data = st.sidebar.checkbox("Show Raw Data Table", False)
-
-if show_data:
-    st.header("Raw Data Preview")
-    st.dataframe(github_df)
-    st.markdown("---")
-
 
 # --- Visualization Functions ---
 
 def create_viz_block(title, chart, interpretation):
     """Helper function to display chart and interpretation in a block."""
-    st.subheader(f"Viz #{title.split(':')[0]}: {title.split(': ')[1]}")
-    st.altair_chart(chart, use_container_width=True)
+    st.subheader(f"{title.split(':')[0]}: {title.split(': ')[1]}")
+    st.plotly_chart(chart, use_container_width=True)
     st.markdown(f"**Interpretation:** {interpretation}")
     st.markdown("---")
 
 # ----------------------------------------------------------------------
-# VISUALIZATION 1: Gender Distribution
+# VISUALIZATION 1 (Pie Chart): Proportional Distribution of Specific Issues
 # ----------------------------------------------------------------------
-title_1 = "1: Gender Distribution of Respondents"
-df_gender = github_df['Gender'].value_counts().reset_index()
-df_gender.columns = ['Gender', 'Count']
-
-chart_1 = alt.Chart(df_gender).mark_bar().encode(
-    x=alt.X('Count'),
-    y=alt.Y('Gender', sort='-x'),
-    color=alt.Color('Gender', scale=alt.Scale(domain=['Female', 'Male'], range=['#90EE90', '#ADD8E6'])),
-    tooltip=['Gender', 'Count']
-).properties(
-    title=title_1
+title_1 = "1 (Pie Chart): Proportion of Students Reporting Each Specific Mental Health Issue"
+df_melt = github_df[['Depression', 'Anxiety', 'Panic_Attack']].melt(
+    value_vars=['Depression', 'Anxiety', 'Panic_Attack'], var_name='Issue_Type', value_name='Reported'
 )
+df_issue_counts = df_melt[df_melt['Reported'] == 'Yes']['Issue_Type'].value_counts().reset_index()
+df_issue_counts.columns = ['Issue_Type', 'Count']
+
+fig_1 = px.pie(
+    df_issue_counts, 
+    values='Count', 
+    names='Issue_Type', 
+    title='Relative Frequency of Reported Issues',
+    color_discrete_sequence=px.colors.qualitative.D3
+)
+fig_1.update_traces(textposition='inside', textinfo='percent+label')
 
 interpretation_1 = (
-    "The dataset exhibits a clear imbalance in respondents, with a significantly higher number of **Female** students participating compared to Male students. "
-    "This imbalance means that any percentage comparison between genders must be interpreted with caution, as the absolute numbers are skewed. "
-    "For instance, even if the absolute number of reported issues is similar, the underlying population proportion (Female vs. Male) in the dataset is unequal. "
-    "This initial view highlights a potential sampling bias."
+    "This Pie Chart clearly illustrates the relative frequency of the three specific mental health concerns reported by the students. "
+    "**Anxiety** accounts for the largest share of reported issues, suggesting it is the most prevalent struggle in this sample. "
+    "Depression is the second most common, while Panic Attacks are reported the least frequently. "
+    "The visualization confirms that interventions focused on general anxiety management would address the most common challenge faced by these students."
 )
-create_viz_block(title_1, chart_1, interpretation_1)
+create_viz_block(title_1, fig_1, interpretation_1)
 
 
 # ----------------------------------------------------------------------
-# VISUALIZATION 2: Mental Health Prevalence by Gender
+# VISUALIZATION 2 (Violin Plot): Age Distribution by Depression Status
 # ----------------------------------------------------------------------
-title_2 = "2: Percentage of Students Reporting ANY Mental Health Issue, by Gender"
-df_prevalence_gender = github_df.groupby('Gender')['Any_Mental_Health_Issue'].value_counts(normalize=True).mul(100).rename('Percentage').reset_index()
-df_prevalence_gender_yes = df_prevalence_gender[df_prevalence_gender['Any_Mental_Health_Issue'] == 'Yes']
+title_2 = "2 (Violin Plot): Student Age Distribution vs. Depression Status"
 
-chart_2 = alt.Chart(df_prevalence_gender_yes).mark_bar().encode(
-    x=alt.X('Percentage', axis=alt.Axis(title='Percentage of Group Reporting Issue (%)')),
-    y=alt.Y('Gender', sort='-x'),
-    color=alt.Color('Gender', scale=alt.Scale(domain=['Female', 'Male'], range=['#FF6347', '#4682B4'])),
-    tooltip=['Gender', alt.Tooltip('Percentage', format='.1f')]
-).properties(
-    title=title_2
+fig_2 = px.violin(
+    github_df, 
+    y="Age", 
+    x="Depression", 
+    color="Depression", 
+    box=True, # Show box plot inside the violin
+    points="all", # Show all data points
+    title="Age Distribution for Students With and Without Depression",
+    labels={"Depression": "Reported Depression", "Age": "Age of Student"},
+    color_discrete_map={'Yes':'#EF553B', 'No':'#00CC96'}
 )
+fig_2.update_layout(showlegend=False)
 
 interpretation_2 = (
-    "When normalized by group size, the data shows that a higher **percentage of Female students** (around 54%) report experiencing at least one mental health issue (Depression, Anxiety, or Panic Attack) compared to Male students (around 30%). "
-    "This suggests that Female students in this sample report disproportionately higher rates of mental health struggles. "
-    "This finding is consistent with broader epidemiological studies that often observe higher self-reported rates of anxiety and depression in young women."
+    "The Violin Plot displays the distribution of student ages, segmented by whether they reported having Depression. "
+    "The most notable insight is that the median age (indicated by the box plot line) is slightly **higher for students reporting Depression (Yes)** compared to those reporting No Depression. "
+    "This may indicate that older students (e.g., those in their final years or non-traditional students) are slightly more likely to experience or report depressive symptoms. "
+    "The spread of ages (violin shape) is wide for both groups, suggesting that age alone is not a primary determining factor."
 )
-create_viz_block(title_2, chart_2, interpretation_2)
+create_viz_block(title_2, fig_2, interpretation_2)
 
 
 # ----------------------------------------------------------------------
-# VISUALIZATION 3: Mental Health Issues vs. Academic Performance (CGPA)
+# VISUALIZATION 3 (Grouped Bar Chart): Treatment Seeking Across Academic Years
 # ----------------------------------------------------------------------
-title_3 = "3: Any Mental Health Issue Prevalence Across CGPA Categories"
-df_cgpa = github_df.groupby('CGPA')['Any_Mental_Health_Issue'].value_counts(normalize=True).mul(100).rename('Percentage').reset_index()
-df_cgpa_yes = df_cgpa[df_cgpa['Any_Mental_Health_Issue'] == 'Yes']
+title_3 = "3 (Grouped Bar Chart): Treatment Seeking Behavior by Academic Year"
 
-# Order the CGPA categories logically
-cgpa_order = ['0 - 1.99', '2.00 - 2.49', '2.50 - 2.99', '3.00 - 3.49', '3.50 - 4.00']
-cgpa_order_label = ['0-1.99', '2.00-2.49', '2.50-2.99', '3.00-3.49', '3.50-4.00']
+# Calculate counts for plotting
+df_treatment_year = github_df.groupby(['Year', 'Treatment_Sought']).size().reset_index(name='Count')
 
-chart_3 = alt.Chart(df_cgpa_yes).mark_bar().encode(
-    x=alt.X('CGPA', sort=cgpa_order, axis=alt.Axis(title="CGPA Range", labels=cgpa_order_label)),
-    y=alt.Y('Percentage', axis=alt.Axis(title='Percentage Reporting Issue (%)')),
-    color=alt.value('#1E90FF'), # Solid color for simplicity
-    tooltip=['CGPA', alt.Tooltip('Percentage', format='.1f')]
-).properties(
-    title=title_3
+fig_3 = px.bar(
+    df_treatment_year,
+    x='Year',
+    y='Count',
+    color='Treatment_Sought',
+    barmode='group',
+    category_orders={'Year': ['Year 1', 'Year 2', 'Year 3', 'Year 4']},
+    title='Absolute Count of Treatment Sought by Academic Year',
+    labels={'Year': 'Academic Year', 'Count': 'Number of Students'},
+    color_discrete_map={'Yes':'#636EFA', 'No':'#B0C4DE'}
 )
 
 interpretation_3 = (
-    "The data reveals an inverse relationship between academic performance (CGPA) and reported mental health issues, but it is not perfectly linear. "
-    "Students in the highest CGPA bracket (**3.50 - 4.00**) report the lowest rate of issues (around 32%), suggesting academic success may correlate with better mental resilience or lower stress levels. "
-    "Conversely, the group with a mid-range CGPA of **3.00 - 3.49** shows the highest prevalence (around 53%). "
-    "This suggests that pressure to maintain above-average grades, rather than low grades alone, might be a significant stressor for students in this sample."
+    "This Grouped Bar Chart compares the absolute number of students who sought treatment against those who did not, across all academic years. "
+    "A clear pattern emerges: the vast majority of students across all years, especially those in **Year 1 and Year 2**, report **not** having sought treatment. "
+    "Crucially, Year 4 students show the lowest counts overall, likely due to fewer respondents in that category, but the ratio of Yes/No seekers remains low. "
+    "This visualization highlights a significant gap where mental health issues may exist but professional help is generally not being accessed by the student body."
 )
-create_viz_block(title_3, chart_3, interpretation_3)
+create_viz_block(title_3, fig_3, interpretation_3)
 
 
 # ----------------------------------------------------------------------
-# VISUALIZATION 4: Distribution of Specific Mental Health Issues
+# VISUALIZATION 4 (Sunburst Chart): Hierarchical Issues by Year and Gender
 # ----------------------------------------------------------------------
-title_4 = "4: Distribution of Specific Reported Mental Health Issues (Depression, Anxiety, Panic Attacks)"
-# Unpivot the three mental health columns for easier plotting
-df_melt = github_df[['Depression', 'Anxiety', 'Panic_Attack']].melt(
-    value_vars=['Depression', 'Anxiety', 'Panic_Attack'],
-    var_name='Issue_Type',
-    value_name='Reported'
-)
-# Count only the 'Yes' responses
-df_issue_count = df_melt[df_melt['Reported'] == 'Yes']['Issue_Type'].value_counts().reset_index()
-df_issue_count.columns = ['Issue_Type', 'Count']
+title_4 = "4 (Sunburst Chart): Breakdown of Students with 'Any Mental Health Issue' by Academic Year and Gender"
 
-chart_4 = alt.Chart(df_issue_count).mark_bar().encode(
-    x=alt.X('Count'),
-    y=alt.Y('Issue_Type', sort='-x', title="Mental Health Issue"),
-    color=alt.Color('Issue_Type', scale=alt.Scale(range=['#FFD700', '#FFA07A', '#F08080'])),
-    tooltip=['Issue_Type', 'Count']
-).properties(
-    title=title_4
+# Filter for students with issues
+df_sunburst = github_df[github_df['Any_Issue'] == 'Yes']
+
+fig_4 = px.sunburst(
+    df_sunburst,
+    path=['Year', 'Gender'], # Hierarchy: Year -> Gender
+    title='Students Reporting Any Issue: Hierarchical Breakdown by Year and Gender',
+    color_discrete_sequence=px.colors.qualitative.Pastel,
+    labels={'parent': 'Academic Year', 'Gender': 'Gender'}
 )
+fig_4.update_layout(margin=dict(t=50, l=0, r=0, b=0))
 
 interpretation_4 = (
-    "Among the three specific issues surveyed, **Anxiety** is the most frequently reported concern, with the highest absolute count among students. "
-    "Depression follows as the second most common, and Panic Attacks are reported least frequently. "
-    "This hierarchy suggests that general feelings of worry and anxiousness are the primary mental health struggle for this student population. "
-    "Interventions aimed at stress management and anxiety reduction are likely to reach the largest number of students based on these reported frequencies."
+    "The Sunburst Chart provides a nested, proportional view of students reporting any mental health issue, first by their academic year, then by gender. "
+    "The outer ring's largest segment belongs to **Year 2 Female** students, indicating this subgroup has the highest absolute number of reported issues in the dataset. "
+    "Female students consistently dominate the reports within every year group, reflecting the high gender imbalance of the full dataset. "
+    "This hierarchy is useful for targeting outreach, suggesting Year 2 females are a priority group for support resources."
 )
-create_viz_block(title_4, chart_4, interpretation_4)
+create_viz_block(title_4, fig_4, interpretation_4)
 
 
 # ----------------------------------------------------------------------
-# VISUALIZATION 5: Treatment Seeking Behavior by Marital Status
+# VISUALIZATION 5 (Box Plot): Issue Count Score Distribution by CGPA
 # ----------------------------------------------------------------------
-title_5 = "5: Proportion of Students Who Sought Treatment, Grouped by Marital Status"
-df_treatment = github_df.groupby('Marital_Status')['Treatment_Sought'].value_counts(normalize=True).mul(100).rename('Percentage').reset_index()
-df_treatment_yes = df_treatment[df_treatment['Treatment_Sought'] == 'Yes']
+title_5 = "5 (Box Plot): Distribution of Mental Health Issue Score (0-3) Across CGPA Categories"
 
-chart_5 = alt.Chart(df_treatment_yes).mark_bar().encode(
-    x=alt.X('Percentage', axis=alt.Axis(title='Percentage of Group Seeking Treatment (%)')),
-    y=alt.Y('Marital_Status', title="Marital Status", sort='-x'),
-    color=alt.Color('Marital_Status', scale=alt.Scale(range=['#48D1CC', '#808080'])),
-    tooltip=['Marital_Status', alt.Tooltip('Percentage', format='.1f')]
-).properties(
-    title=title_5
+# Order the CGPA categories logically
+cgpa_order = ['0 - 1.99', '2.00 - 2.49', '2.50 - 2.99', '3.00 - 3.49', '3.50 - 4.00']
+
+fig_5 = px.box(
+    github_df,
+    x='CGPA',
+    y='Issue_Count',
+    color='CGPA',
+    category_orders={'CGPA': cgpa_order},
+    title="Mental Health Issue Severity (Count) by Academic Performance (CGPA)",
+    labels={'CGPA': 'CGPA Range', 'Issue_Count': 'Number of Reported Issues (0=None, 3=All)'}
 )
+fig_5.update_yaxes(tickvals=[0, 1, 2, 3], ticktext=['0', '1', '2', '3']) # Fix y-axis ticks
 
 interpretation_5 = (
-    "The data shows a clear distinction in treatment-seeking behavior based on marital status. "
-    "Students who report being **Married** show a dramatically higher tendency to have sought professional treatment (nearly 50% of the group) compared to those who are Single (around 12%). "
-    "While the number of married students is small, this difference is striking. "
-    "This insight suggests that having a spouse/partner may provide a stronger support system or motivation to address mental health issues professionally, or that the stressors of married life/student life combination necessitate professional help more frequently."
+    "This Box Plot examines the median and spread of the 'Issue Count' (a proxy for severity, from 0 to 3) across CGPA ranges. "
+    "The median issue count is notably low (0 or 1) across all CGPA groups, suggesting most students report zero or only one issue. "
+    "However, the highest median issue count appears in the mid-range **3.00 - 3.49** category, supporting the earlier finding that pressure to maintain above-average grades might increase stress. "
+    "The fact that the 3.50 - 4.00 category shows a lower median and narrower distribution suggests that the top academic performers are generally the most mentally resilient in this sample."
 )
-create_viz_block(title_5, chart_5, interpretation_5)
+create_viz_block(title_5, fig_5, interpretation_5)
