@@ -43,3 +43,44 @@ st.plotly_chart(fig, use_container_width=True)
 # You can also display the raw data used for the chart
 st.write("### Gender Counts")
 st.dataframe(gender_counts)
+
+# --- Assuming 'mental_health_df' is already loaded and available in your Streamlit app ---
+# Placeholder for demonstration. Replace with your actual data loading.
+data = {
+    'Age': [25, 30, 25, 40, 30, 25, 40, 30, 25, 40],
+    'Do you have Depression?': ['Yes', 'No', 'No', 'Yes', 'Yes', 'No', 'No', 'Yes', 'Yes', 'No']
+}
+mental_health_df = pd.DataFrame(data)
+# --------------------------------------------------------------------------------------
+
+# 1. Prepare the data: Calculate the counts for each Age and Depression combination
+# The original sns.countplot implicitly does this. For Plotly, we explicitly count and group.
+age_depression_counts = mental_health_df.groupby(['Age', 'Do you have Depression?']).size().reset_index(name='Count')
+
+
+# 2. Create the Plotly Bar Chart
+fig = px.bar(
+    age_depression_counts,
+    x='Age',                             # Column for the x-axis
+    y='Count',                           # Column for the height of the bars
+    color='Do you have Depression?',     # Column to color/group the bars (equivalent to 'hue')
+    barmode='group',                     # Ensures the bars are grouped side-by-side
+    title='Relationship between Age and Depression',
+    labels={'Age': 'Age of Respondent', 'Count': 'Number of Respondents'},
+    # Optional: Customize the colors (e.g., matching the 'viridis' feel)
+    color_discrete_map={'Yes': '#440154', 'No': '#21908d'} # Example colors
+)
+
+# Optional: Further customize the layout for better appearance
+fig.update_layout(
+    xaxis={'categoryorder':'category ascending'} # Ensures 'Age' is sorted correctly
+)
+
+
+# 3. Display the plot in Streamlit
+st.title("Mental Health Survey Analysis")
+st.plotly_chart(fig, use_container_width=True)
+
+# You can also display the raw count data
+st.write("### Count Data Used for Plot")
+st.dataframe(age_depression_counts)
