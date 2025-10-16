@@ -43,3 +43,42 @@ st.plotly_chart(fig, use_container_width=True)
 # You can also display the raw data used for the chart
 st.write("### Gender Counts")
 st.dataframe(gender_counts)
+
+print("--- Visualization: Course of Study vs. Gender ---")
+plt.figure(figsize=(14, 8))
+
+# Generate the countplot
+sns.countplot(
+    y='What is your course?', 
+    hue='Choose your gender', 
+    data=mental_health_df, 
+    # Order bars by the total count of students in that course
+    order=mental_health_df['What is your course?'].value_counts().index, 
+    palette='viridis'
+)
+
+plt.title('Relationship between Course of Study and Gender', fontsize=16, pad=20)
+plt.xlabel('Count', fontsize=14)
+plt.ylabel('Course of Study', fontsize=14)
+plt.legend(title='Gender', loc='lower right')
+plt.grid(axis='x', linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.show()
+
+
+# --- 3. Interpretation ---
+print("\n--- Interpretation ---")
+interpretation = """
+This countplot clearly illustrates the gender distribution within the different academic courses represented in the dataset (N=41).
+
+**Key Findings:**
+
+1.  **Overall Gender Skew:** The sample has a significant overall skew towards **Female** respondents, which is reflected across most courses.
+2.  **Most Represented Courses:** The largest groups—**Engineering** (9 Female, 2 Male) and **BCS** (8 Female, 2 Male)—are female-dominated, reflecting the broader sample bias.
+3.  **Female-Only Representation:** Several smaller courses, including Psychology, Banking Studies, ENM, and others, show participants exclusively from the female demographic in this dataset.
+
+**Conclusion:**
+
+The data suggests that the survey successfully captured the perspective of female students across various academic programs, but caution is advised when generalizing findings due to the pronounced underrepresentation of male students.
+"""
+print(interpretation)
