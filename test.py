@@ -12,7 +12,7 @@ st.header("Student Mental Health Year 1", divider="gray")
 # --- Assuming 'mental_health_df' is already loaded and available in your Streamlit app ---
 # Placeholder for demonstration. Replace with your actual data loading.
 # Example DataFrame structure for demonstration purposes:
-data = {'Choose your gender': ['Male', 'Female', 'Male', 'Non-binary', 'Female', 'Male', 'Female', 'Male']}
+data = {'Choose your gender': ['Male', 'Female', 'Male', 'Female', 'Female', 'Male', 'Female', 'Male']}
 mental_health_df = pd.DataFrame(data)
 # --------------------------------------------------------------------------------------
 
