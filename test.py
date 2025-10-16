@@ -44,43 +44,33 @@ st.plotly_chart(fig, use_container_width=True)
 st.write("### Gender Counts")
 st.dataframe(gender_counts)
 
-# --- Assuming 'mental_health_df' is already loaded and available in your Streamlit app ---
-# Placeholder for demonstration. Replace with your actual data loading.
+import streamlit as st
+import plotly.express as px
+import pandas as pd
+
+# --- Assuming 'mental_health_df' and 'fig' (the Plotly figure) are already defined ---
+# (Using placeholder code for context)
 data = {
     'Age': [25, 30, 25, 40, 30, 25, 40, 30, 25, 40],
     'Do you have Depression?': ['Yes', 'No', 'No', 'Yes', 'Yes', 'No', 'No', 'Yes', 'Yes', 'No']
 }
 mental_health_df = pd.DataFrame(data)
+age_depression_counts = mental_health_df.groupby(['Age', 'Do you have Depression?']).size().reset_index(name='Count')
+fig = px.bar(age_depression_counts, x='Age', y='Count', color='Do you have Depression?', barmode='group', title='Relationship between Age and Depression')
 # --------------------------------------------------------------------------------------
 
-# 1. Prepare the data: Calculate the counts for each Age and Depression combination
-# The original sns.countplot implicitly does this. For Plotly, we explicitly count and group.
-age_depression_counts = mental_health_df.groupby(['Age', 'Do you have Depression?']).size().reset_index(name='Count')
 
-
-# 2. Create the Plotly Bar Chart
-fig = px.bar(
-    age_depression_counts,
-    x='Age',                             # Column for the x-axis
-    y='Count',                           # Column for the height of the bars
-    color='Do you have Depression?',     # Column to color/group the bars (equivalent to 'hue')
-    barmode='group',                     # Ensures the bars are grouped side-by-side
-    title='Relationship between Age and Depression',
-    labels={'Age': 'Age of Respondent', 'Count': 'Number of Respondents'},
-    # Optional: Customize the colors (e.g., matching the 'viridis' feel)
-    color_discrete_map={'Yes': '#440154', 'No': '#21908d'} # Example colors
-)
-
-# Optional: Further customize the layout for better appearance
-fig.update_layout(
-    xaxis={'categoryorder':'category ascending'} # Ensures 'Age' is sorted correctly
-)
-
-
-# 3. Display the plot in Streamlit
-st.title("Mental Health Survey Analysis")
+# 1. Display the Plotly chart
 st.plotly_chart(fig, use_container_width=True)
 
-# You can also display the raw count data
-st.write("### Count Data Used for Plot")
-st.dataframe(age_depression_counts)
+# 2. Add text directly below the graph using Streamlit's text functions
+# Use different functions depending on the style and size you want:
+
+# For a small, descriptive caption/note
+st.caption("Figure 1: This bar chart shows the distribution of depression diagnoses across different age groups in the survey.")
+
+# For a general block of text or an observation
+st.write("Observation: The age group 25-30 appears to have the highest reported count of depression in this dataset.")
+
+# For a slightly emphasized note
+st.markdown("**Note:** This is preliminary data and does not imply causation.")
