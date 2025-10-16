@@ -32,4 +32,3 @@ fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
 # Display the chart in Streamlit
 st.plotly_chart(fig, use_container_width=True)
 
-)
