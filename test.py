@@ -7,17 +7,28 @@ import pandas as pd
 mental_health_df = pd.read_csv("student_mental_health_data.csv")
 
 # Count the occurrences of each gender
-gender_counts = mental_health_df['Choose your gender'].value_counts()
+gender_counts = mental_health_df['Choose your gender'].value_counts().reset_index()
+gender_counts.columns = ['Gender', 'Count'] # Rename columns for clarity in Plotly
 
-# Streamlit App
-st.title('Mental Health Data Visualization')
-st.subheader('Gender Distribution')
+# Create a Plotly Pie Chart
+# Plotly Express is often the simplest way to create standard plots
+fig = px.pie(
+    gender_counts,
+    values='Count',
+    names='Gender',
+    title='Distribution of Gender',
+    # Optional: Customize the appearance
+    color_discrete_sequence=px.colors.sequential.RdBu, # Example color sequence
+    hole=0.3 # Optional: makes it a donut chart
+)
 
-# Create a pie chart
-fig, ax = plt.subplots(figsize=(8, 8))
-ax.pie(gender_counts, labels=gender_counts.index, autopct='%1.1f%%', startangle=90, colors=sns.color_palette('pastel'))
-ax.set_title('Distribution of Gender')
-ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+# Optional: Further customize layout
+fig.update_traces(textposition='inside', textinfo='percent+label')
+fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
 
-# Display the pie chart in Streamlit
-st.pyplot(fig)
+# Display the plot in Streamlit
+st.plotly_chart(fig, use_container_width=True)
+
+# You can also display the raw data used for the chart
+st.write("### Gender Counts")
+st.dataframe(gender_counts)
