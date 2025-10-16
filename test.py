@@ -1,37 +1,35 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
 import pandas as pd
 
-# Load your data
-mental_health_df = pd.read_csv("student_mental_health_data.csv")
+# Assuming 'mental_health_df' is loaded elsewhere in your Streamlit app.
+# For demonstration, let's create a placeholder DataFrame.
+# In a real application, you would replace this with your actual data loading.
+data = {'Choose your gender': ['Female', 'Male', 'Female', 'Male', 'Non-binary', 'Male', 'Female', 'Male']}
+mental_health_df = pd.DataFrame(data)
 
-st.header("Gender Distribution in Survey Respondents")
+# --- Code Conversion Starts Here ---
 
-# Create a Plotly Pie Chart
-# This is the line that was failing, now using the properly formatted DataFrame
-fig = pd.pie(
-    gender_data_for_plot,
-    values='Count',
-    names='Gender',
+# Count the occurrences of each gender.
+# Plotly Express can often handle this directly if the data is in the right format.
+# However, explicitly counting ensures the 'names' and 'values' for the pie chart are correct.
+gender_counts = mental_health_df['Choose your gender'].value_counts().reset_index()
+gender_counts.columns = ['Gender', 'Count'] # Rename columns for clarity in Plotly
+
+# Create a Plotly Pie Chart (equivalent of your matplotlib code)
+fig = px.pie(
+    gender_counts,
+    values='Count',          # The values (counts) for each slice
+    names='Gender',          # The labels (gender categories) for each slice
     title='Distribution of Gender',
-    color_discrete_sequence=px.colors.sequential.RdBu,
-    hole=0.3 # Creates a donut chart
+    color_discrete_sequence=px.colors.sequential.Agsunset, # Choose a color palette
 )
 
-# Optional: Customize the appearance for clarity
-fig.update_traces(textposition='outside', textinfo='percent+label')
+# Optional: Customize layout for better appearance (e.g., set uniform text size)
+fig.update_traces(textposition='inside', textinfo='percent+label')
 fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
 
-# Display the plot in Streamlit
+# Display the chart in Streamlit
 st.plotly_chart(fig, use_container_width=True)
 
-# Add text below the graph
-st.caption("Figure 1: This chart visualizes the proportion of each gender category among the survey participants.")
-st.write(
-    """
-    **Data Note:** Plotly requires the data to be in a structured format (a DataFrame) with distinct columns 
-    for the slice size (`values`) and the slice labels (`names`). The error likely occurred because the 
-    DataFrame was not correctly constructed or named before passing it to `px.pie()`.
-    """
 )
