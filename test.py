@@ -10,7 +10,7 @@ st.header("Gender Distribution in Survey Respondents")
 
 # Create a Plotly Pie Chart
 # This is the line that was failing, now using the properly formatted DataFrame
-fig = px.pie(
+fig = pd.pie(
     gender_data_for_plot,
     values='Count',
     names='Gender',
